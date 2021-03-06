@@ -1,0 +1,13 @@
+id, first_name, last_name, role_id, manager_id
+01, Paul, Vatterott, 01, null
+02, Carol, Jackson, 02, 01
+03, Caleb, Muller, 03, 01
+04, Tom, Pollard, 04, null
+05, Kate, Pollard, 05, 04
+06, Sheridan, Davis, 06, 04
+07, Max, Sasso, 07, null
+08, Jack, Nelson, 08, 07
+09, Courtney, Brattin, 09, 07
+10, Francine, Wirtz, 10, null
+11, Ed, Mccall, 11, 10
+12, Jason, Weber, 12, 10

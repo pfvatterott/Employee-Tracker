@@ -1,0 +1,14 @@
+id, title, salary, department_id
+01, manager, 100000, 01
+02, manager assistant, 50000, 01
+03, intern, 25000, 01
+04, manager, 100000, 02
+05, manager assistant, 50000, 02
+06, intern, 25000, 02
+07, manager, 100000, 03
+08, manager assistant, 50000, 03
+09, intern, 25000, 03
+10, manager, 100000, 04
+11, manager assistant, 50000, 04
+12, intern, 25000, 04
+
