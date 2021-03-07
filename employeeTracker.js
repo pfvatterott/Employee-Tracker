@@ -39,6 +39,9 @@ const introQuestion = () => {
         case 'Add Employee':
           addEmployee();
           break;
+        case 'Remove Employee':
+          removeEmployee();
+          break;
       }
     })
 };
@@ -76,8 +79,6 @@ const viewByDepartment = () => {
         choices: departments,
       }).then((answer) => {
         connection.query(`
-      SELECT * 
-      FROM employee
       INNER JOIN employee_role ON employee.role_id = employee_role.role_id
       INNER JOIN department ON employee_role.department_id = department.department_id
       WHERE deptname = '${answer.deptChoice}';
@@ -169,7 +170,7 @@ const addEmployee = () => {
       choices: deptNames,
     }]
     ).then((answers) => {
-      newEmployee.push({ firstName: answers.employeeName.split(" ")[0], lastName: answers.employeeName.split(" ")[1], department_id: answers.employeeDept.split(" ")[0]})
+      newEmployee.push({ firstName: answers.employeeName.split(" ")[0], lastName: answers.employeeName.split(" ")[1], department_id: answers.employeeDept.split(" ")[0] })
       connection.query(`
       SELECT * 
       FROM employee
@@ -198,37 +199,95 @@ const addEmployee = () => {
             WHERE first_name = '${firstAndLast[0]}' AND last_name = '${firstAndLast[1]}';
             `, (err, res) => {
               if (err) throw err;
-              newEmployee.push({managerID: res[0].employee_id})
+              newEmployee.push({ managerID: res[0].employee_id })
             })
-          connection.query(`
+            connection.query(`
           SELECT role_id, title, department_id FROM employee_role 
           WHERE department_id = ${newEmployee[0].department_id}
           `, (err, res) => {
-            let deptTitles = [];
-            if (err) throw err;
-            for (let i = 0; i < res.length; i++) {
-              deptTitles.push(res[i].title)
-            }
-            inquirer
-            .prompt({
-              type: 'list',
-              name: 'employeeTitle',
-              message: 'What is their role?',
-              choices: deptTitles,
-            }).then((answers) => {
-              console.log(answers)
+              let deptTitles = [];
+              if (err) throw err;
+              for (let i = 0; i < res.length; i++) {
+                deptTitles.push(res[i].title)
+              }
+              inquirer
+                .prompt({
+                  type: 'list',
+                  name: 'employeeTitle',
+                  message: 'What is their role?',
+                  choices: deptTitles,
+                }).then((answers) => {
+                  connection.query(`
+              SELECT * FROM employee_role
+              WHERE title = '${answers.employeeTitle}' AND department_id = ${newEmployee[0].department_id}
+              `, (err, res) => {
+                    if (err) throw err;
+                    newEmployee.push({ role_id: res[0].role_id });
+                    connection.query(`INSERT INTO employee SET ?`,
+                      {
+                        first_name: newEmployee[0].firstName,
+                        last_name: newEmployee[0].lastName,
+                        role_id: newEmployee[2].role_id,
+                        manager_id: newEmployee[1].managerID
+                      },
+                      (err, res) => {
+                        if (err) throw err;
+                        console.log(`${newEmployee[0].firstName} ${newEmployee[0].lastName} has been added!`)
+                        introQuestion();
+                      })
+                  })
+                })
             })
           })
-          })
       })
+    })
+}
+
+const removeEmployee = () => {
+  employeeList = [];
+  connection.query(`
+  SELECT first_name, last_name FROM employee
+  ORDER BY last_name;
+  `, (err, res) => {
+    if (err) throw err;
+    for (let i = 0; i < res.length; i++) {
+      employeeList.push(res[i].first_name + " " + res[i].last_name)
     }
-    )}
+    inquirer
+      .prompt({
+        type: 'list',
+        name: 'employeeList',
+        message: 'Which employee would you like to remove?',
+        choices: employeeList,
+      }).then((answer) => {
+        const firstName = answer.employeeList.split(" ")[0]
+        const lastName = answer.employeeList.split(" ")[1]
+        connection.query(
+          `DELETE FROM employee WHERE ?`,
+          [
+            {
+              first_name: firstName,
+            },
+            {
+              last_name: lastName,
+            },
+          ],
+          (err, res) => {
+            if (err) throw err;
+            console.log(`The employee ${firstName} ${lastName} has been removed!`);
+            introQuestion();
+          }
+        )
+      })
+  })
+}
+
 
 connection.connect((err) => {
-      if (err) throw err;
-      // https://patorjk.com/software/taag/#p=display&h=0&f=Big%20Money-nw&t=Employee%0ATracker%20
-      console.log(
-        `
+  if (err) throw err;
+  // https://patorjk.com/software/taag/#p=display&h=0&f=Big%20Money-nw&t=Employee%0ATracker%20
+  console.log(
+    `
     $$$$$$$$\                         $$\                                         
     $$  _____|                        $$ |                                        
     $$ |      $$$$$$\$$$$\   $$$$$$\  $$ | $$$$$$\  $$\   $$\  $$$$$$\   $$$$$$\  
@@ -252,6 +311,6 @@ connection.connect((err) => {
                                                                                   
                                                                                       
     `
-      );
-      introQuestion();
-    });
+  );
+  introQuestion();
+});
