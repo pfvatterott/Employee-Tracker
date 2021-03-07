@@ -59,15 +59,18 @@ const viewAllEmployees = () => {
 };
 
 const viewByDepartment = () => {
+  const departments = [];
   connection.query(`SELECT deptname FROM department`, (err, res) => {
     if (err) throw err;
-  })
-  inquirer
+    for (let i = 0; i < res.length; i++) {
+      departments.push(res[i].deptname)
+    }
+    inquirer
     .prompt({
       type: 'list',
       name: 'deptChoice',
       message: 'Which Department?',
-      choices: ['sales', 'engineering', 'finance', 'legal'],
+      choices: departments,
     }).then((answer) => {
       connection.query(`
       SELECT * 
@@ -77,13 +80,15 @@ const viewByDepartment = () => {
       WHERE deptname = '${answer.deptChoice}';
       `, (err, res) => {
         if (err) throw err;
-        console.log(console.table(res))
+        console.log(console.table(res));
         introQuestion();
       })
     })
+  })
 }
 
 const viewByManager = () => {
+  const managers = [];
   connection.query(`
       SELECT * 
       FROM employee
@@ -92,7 +97,44 @@ const viewByManager = () => {
       WHERE title = 'manager';
     `, (err, res) => {
       if (err) throw err;
-      console.log(res)
+      for (let i = 0; i < res.length; i++) {
+        managers.push(res[i].first_name + " " + res[i].last_name)
+      }
+      inquirer
+        .prompt({
+          type: 'list',
+          name: 'managerChoice',
+          message: 'Which Manager?',
+          choices: managers,
+        }).then((answer) => {
+          // find what the managers employee ID is
+          // split answer string into two variables, first and last name
+          const firstAndLast = answer.managerChoice.split(" ")
+          connection.query(`
+          SELECT * 
+          FROM employee
+          INNER JOIN employee_role ON employee.role_id = employee_role.role_id
+          INNER JOIN department ON employee_role.department_id = department.department_id
+          WHERE first_name = '${firstAndLast[0]}' AND last_name = '${firstAndLast[1]}';
+          `, (err, res) => {
+            if (err) throw err;
+            console.log(res[0].employee_id);
+            let managerID = res[0].employee_id;
+            connection.query(`
+            SELECT * 
+            FROM employee
+            INNER JOIN employee_role ON employee.role_id = employee_role.role_id
+            INNER JOIN department ON employee_role.department_id = department.department_id
+            WHERE manager_id = ${managerID};
+            `, (err, res) => {
+              if (err) throw err;
+              console.log(console.table(res));
+              introQuestion();
+            })
+          })
+          
+          
+        })
     })
 }
 
