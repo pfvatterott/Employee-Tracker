@@ -35,6 +35,9 @@ const introQuestion = () => {
         case 'Remove Employee':
           removeEmployee();
           break;
+        case 'Update Employee Role':
+          updateEmployeeRole();
+          break;
       }
     })
 };
@@ -273,6 +276,37 @@ const removeEmployee = () => {
             introQuestion();
           }
         )
+      })
+  })
+}
+
+const updateEmployeeRole = () => {
+  employeeList = [];
+  connection.query(`
+  SELECT first_name, last_name FROM employee
+  ORDER BY last_name;
+  `, (err, res) => {
+    if (err) throw err;
+    for (let i = 0; i < res.length; i++) {
+      employeeList.push(res[i].first_name + " " + res[i].last_name)
+    }
+    inquirer
+      .prompt({
+        type: 'list',
+        name: 'employeeList',
+        message: 'Which employee would you like to update?',
+        choices: employeeList,
+      }).then((answer) => {
+        const firstName = answer.employeeList.split(" ")[0];
+        const lastName = answer.employeeList.split(" ")[1];
+        connection.query(`
+        SELECT * FROM employee
+        WHERE first_name = '${firstName}' and last_name = '${lastName}'
+        `, (err, res) => {
+          if (err) throw err;
+          console.log(res)
+          // Get role, find department, find all roles in that dept.
+        })
       })
   })
 }
