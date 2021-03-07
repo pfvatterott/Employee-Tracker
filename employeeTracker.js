@@ -121,7 +121,6 @@ const viewByManager = () => {
           WHERE first_name = '${firstAndLast[0]}' AND last_name = '${firstAndLast[1]}';
           `, (err, res) => {
           if (err) throw err;
-          console.log(res[0].employee_id);
           let managerID = res[0].employee_id;
           connection.query(`
             SELECT * 
@@ -139,17 +138,15 @@ const viewByManager = () => {
   })
 }
 
-
-
 const addEmployee = () => {
   let newEmployee = [];
   const deptNames = [];
   const managers = [];
-  connection.query(`SELECT deptname FROM department`, (err, res) => {
-      for (let i = 0; i < res.length; i++) {
-        deptNames.push(res[i].deptname)
-      }
-    })
+  connection.query(`SELECT * FROM department`, (err, res) => {
+    for (let i = 0; i < res.length; i++) {
+      deptNames.push(res[i].department_id + " : " + res[i].deptname)
+    }
+  })
   inquirer
     .prompt([{
       type: 'input',
@@ -157,13 +154,13 @@ const addEmployee = () => {
       message: "What is the employee's name?",
       validate: function (value) {
         var pass = value.match(
-            /^\S+\s\S+$/
+          /^\S+\s\S+$/
         );
         if (pass) {
-            return true;
+          return true;
         }
         return 'Please enter both the first name and last name'
-    }
+      }
     },
     {
       type: 'list',
@@ -172,35 +169,66 @@ const addEmployee = () => {
       choices: deptNames,
     }]
     ).then((answers) => {
-      newEmployee.push({firstName: answers.employeeName.split(" ")[0], lastName: answers.employeeName.split(" ")[1], deptname: answers.employeeDept})
+      newEmployee.push({ firstName: answers.employeeName.split(" ")[0], lastName: answers.employeeName.split(" ")[1], department_id: answers.employeeDept.split(" ")[0]})
       connection.query(`
       SELECT * 
       FROM employee
       INNER JOIN employee_role ON employee.role_id = employee_role.role_id
       INNER JOIN department ON employee_role.department_id = department.department_id
-      WHERE title = 'manager' AND deptname = '${answers.employeeDept}';
+      WHERE title = 'manager' AND deptname = '${answers.employeeDept.split(" ")[2]}';
       `, (managerErr, managerRes) => {
         if (managerErr) throw managerErr;
         for (let i = 0; i < managerRes.length; i++) {
           managers.push(managerRes[i].first_name + " " + managerRes[i].last_name)
         }
+        managers.push('They do not have a manager');
         inquirer
           .prompt({
             type: 'list',
             name: 'employeeManager',
             message: 'Who is their Manager?',
             choices: managers,
+          }).then((answers) => {
+            const firstAndLast = answers.employeeManager.split(" ")
+            connection.query(`
+            SELECT * 
+            FROM employee
+            INNER JOIN employee_role ON employee.role_id = employee_role.role_id
+            INNER JOIN department ON employee_role.department_id = department.department_id
+            WHERE first_name = '${firstAndLast[0]}' AND last_name = '${firstAndLast[1]}';
+            `, (err, res) => {
+              if (err) throw err;
+              newEmployee.push({managerID: res[0].employee_id})
+            })
+          connection.query(`
+          SELECT role_id, title, department_id FROM employee_role 
+          WHERE department_id = ${newEmployee[0].department_id}
+          `, (err, res) => {
+            let deptTitles = [];
+            if (err) throw err;
+            for (let i = 0; i < res.length; i++) {
+              deptTitles.push(res[i].title)
+            }
+            inquirer
+            .prompt({
+              type: 'list',
+              name: 'employeeTitle',
+              message: 'What is their role?',
+              choices: deptTitles,
+            }).then((answers) => {
+              console.log(answers)
+            })
+          })
           })
       })
-
     }
     )}
 
 connection.connect((err) => {
-  if (err) throw err;
-  // https://patorjk.com/software/taag/#p=display&h=0&f=Big%20Money-nw&t=Employee%0ATracker%20
-  console.log(
-    `
+      if (err) throw err;
+      // https://patorjk.com/software/taag/#p=display&h=0&f=Big%20Money-nw&t=Employee%0ATracker%20
+      console.log(
+        `
     $$$$$$$$\                         $$\                                         
     $$  _____|                        $$ |                                        
     $$ |      $$$$$$\$$$$\   $$$$$$\  $$ | $$$$$$\  $$\   $$\  $$$$$$\   $$$$$$\  
@@ -224,6 +252,6 @@ connection.connect((err) => {
                                                                                   
                                                                                       
     `
-  );
-  introQuestion();
-});
+      );
+      introQuestion();
+    });
