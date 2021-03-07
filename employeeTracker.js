@@ -16,7 +16,7 @@ const introQuestion = () => {
       type: 'list',
       name: 'introQuestion',
       message: 'What would you like to do?',
-      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager'],
+      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Exit Program'],
     })
     .then((answer) => {
       switch (answer.introQuestion) {
@@ -38,6 +38,12 @@ const introQuestion = () => {
         case 'Update Employee Role':
           updateEmployeeRole();
           break;
+        case 'Update Employee Manager':
+          updateEmployeeManager();
+          break;
+        case 'Exit Program':
+          console.log('Goodbye!');
+          process.exit();
       }
     })
 };
@@ -304,8 +310,128 @@ const updateEmployeeRole = () => {
         WHERE first_name = '${firstName}' and last_name = '${lastName}'
         `, (err, res) => {
           if (err) throw err;
-          console.log(res)
-          // Get role, find department, find all roles in that dept.
+          const employeeRole = res[0].role_id;
+          connection.query(`
+          SELECT * FROM employee_role
+          WHERE role_id = ${employeeRole};
+          `, (err, res) => {
+            if (err) throw err;
+            const deptID = res[0].department_id;
+            connection.query(`
+            SELECT * FROM employee_role
+            WHERE department_id = '${deptID}'
+            `, (err, res) => {
+              if (err) throw err;
+              let departmentArray = [];
+              for (let i = 0; i < res.length; i++) {
+                departmentArray.push(res[i].title)
+              }
+              inquirer
+                .prompt({
+                  type: 'list',
+                  name: 'deptList',
+                  message: 'Which role would you like to update the employee with?',
+                  choices: departmentArray,
+                }).then((answer) => {
+                  connection.query(`
+                    SELECT * FROM employee_role
+                    WHERE department_id = ${deptID} AND title = '${answer.deptList}';
+                  `, (err, res) => {
+                    if (err) throw err;
+                    const newRoleID = res[0].role_id;
+                    connection.query(`
+                    UPDATE employee
+                    SET role_id = ${newRoleID}
+                    WHERE first_name = '${firstName}' and last_name = '${lastName}'
+                    `, (err, res) => {
+                      if (err) throw err;
+                      console.log(`${firstName} ${lastName} has been updated to ${answer.deptList}`);
+                      introQuestion();
+                    })
+                  })
+                })
+            })
+          })
+        })
+      })
+  })
+}
+
+const updateEmployeeManager = () => {
+  employeeList = [];
+  connection.query(`
+  SELECT first_name, last_name FROM employee
+  ORDER BY last_name;
+  `, (err, res) => {
+    if (err) throw err;
+    for (let i = 0; i < res.length; i++) {
+      employeeList.push(res[i].first_name + " " + res[i].last_name)
+    }
+    inquirer
+      .prompt({
+        type: 'list',
+        name: 'employeeList',
+        message: 'Which employee would you like to update managers for?',
+        choices: employeeList,
+      }).then((answer) => {
+        const firstName = answer.employeeList.split(" ")[0];
+        const lastName = answer.employeeList.split(" ")[1];
+        connection.query(`
+        SELECT * FROM employee
+        WHERE first_name = '${firstName}' and last_name = '${lastName}'
+        `, (err, res) => {
+          if (err) throw err;
+          const employeeID = res[0].employee_id;
+          const employeeRole = res[0].role_id;
+          connection.query(`
+          SELECT * FROM employee_role
+          WHERE role_id = ${employeeRole};
+          `, (err, res) => {
+            if (err) throw err;
+            const deptID = res[0].department_id;
+            connection.query(`
+            SELECT * FROM employee_role
+            WHERE department_id = '${deptID}' AND title = 'manager';
+            `, (err, res) => {
+              if (err) throw err;
+              connection.query(`
+              SELECT * FROM employee
+              WHERE role_id = ${res[0].role_id};
+              `, (err, res) => {
+                console.log(res)
+                const managerList = [];
+                for (let i = 0; i < res.length; i++) {
+                  managerList.push(res[i].first_name + " " + res[i].last_name)
+                }
+                inquirer
+                  .prompt({
+                    type: 'list',
+                    name: 'managerList',
+                    message: 'Which manager would you like to update with?',
+                    choices: managerList,
+                  }).then((answer) => {
+                    const managerFirstName = answer.managerList.split(" ")[0];
+                    const managerLastName = answer.managerList.split(" ")[1];
+                    connection.query(`
+                    SELECT * FROM employee
+                    WHERE first_name = '${managerFirstName}' AND last_name = '${managerLastName}'
+                    `, (err, res) => {
+                      if (err) throw err;
+                      const managerID = res[0].employee_id;
+                      connection.query(`
+                      UPDATE employee
+                      SET manager_id = ${managerID}
+                      WHERE employee_id = ${employeeID};
+                    `, (err, res) => {
+                        if (err) throw err;
+                        console.log(`${firstName} ${lastName}'s manager has been updated to ${managerFirstName} ${managerLastName}`);
+                        introQuestion();
+                      })
+                    })
+                  })
+              })
+            })
+          })
         })
       })
   })
