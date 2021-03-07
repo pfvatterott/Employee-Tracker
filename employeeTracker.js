@@ -4,18 +4,11 @@ const cTable = require('console.table');
 
 const connection = mysql.createConnection({
   host: 'localhost',
-
-  // Your port; if not 3306
   port: 3306,
-
-  // Your username
   user: 'root',
-
-  // Be sure to update with your own MySQL password!
   password: '$Uper123',
   database: 'employee_tracker',
 });
-
 
 const introQuestion = () => {
   inquirer
@@ -79,6 +72,8 @@ const viewByDepartment = () => {
         choices: departments,
       }).then((answer) => {
         connection.query(`
+      SELECT * 
+      FROM employee
       INNER JOIN employee_role ON employee.role_id = employee_role.role_id
       INNER JOIN department ON employee_role.department_id = department.department_id
       WHERE deptname = '${answer.deptChoice}';
