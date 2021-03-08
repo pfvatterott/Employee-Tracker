@@ -16,7 +16,7 @@ const introQuestion = () => {
       type: 'list',
       name: 'introQuestion',
       message: 'What would you like to do?',
-      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Exit Program'],
+      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Create New Role', 'Exit Program'],
     })
     .then((answer) => {
       switch (answer.introQuestion) {
@@ -43,6 +43,9 @@ const introQuestion = () => {
           break;
         case 'Create New Department':
           createNewDepartment();
+          break;
+        case 'Create New Role':
+          createNewRole();
           break;
         case 'Exit Program':
           console.log('Goodbye!');
@@ -458,6 +461,69 @@ const createNewDepartment = () => {
       )
     })
 }
+
+const createNewRole = () => {
+  inquirer
+    .prompt([
+      {
+        type: 'input',
+        name: 'newRole',
+        message: 'What is the name of the new role?',
+      },
+      {
+        type: 'input',
+        name: 'salary',
+        message: 'What is the yearly salary for this position?',
+        validate: function (value) {
+          var pass = Number.isInteger(+value)
+          if (pass) {
+            return true;
+          }
+          return 'Please enter a number'
+        }
+      }
+  ]).then((answers) => {
+    const newRole = answers.newRole;
+    const newSalary = answers.salary;
+    connection.query(`
+    SELECT * FROM department
+    `, (err, res) => {
+      const deptInformation = res;
+      if (err) throw err;
+      const deptArray = [];
+      for (let i = 0; i < res.length; i++) {
+        deptArray.push(res[i].deptname)
+      }
+      inquirer
+        .prompt({
+          type: 'list',
+          name: 'department',
+          message: 'Which department will this role be for?',
+          choices: deptArray,
+        }).then((answer) => {
+          let departmentID;
+          for (let i = 0; i < deptInformation.length; i++) {
+            if (deptInformation[i].deptname == answer.department){
+              departmentID = deptInformation[i].department_id;
+            }
+          }
+          connection.query(`
+          INSERT INTO employee_role SET ?`, 
+          {
+            title: newRole,
+            salary: newSalary,
+            department_id: departmentID,
+          },
+            (err, res) => {
+            if (err) throw err;
+            console.log(`The new role of ${newRole} has been created!`)
+            introQuestion();
+          })
+        })
+    })
+  })
+}
+
 
 
 connection.connect((err) => {
