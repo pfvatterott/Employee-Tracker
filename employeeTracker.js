@@ -16,7 +16,7 @@ const introQuestion = () => {
       type: 'list',
       name: 'introQuestion',
       message: 'What would you like to do?',
-      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Exit Program'],
+      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Exit Program'],
     })
     .then((answer) => {
       switch (answer.introQuestion) {
@@ -40,6 +40,9 @@ const introQuestion = () => {
           break;
         case 'Update Employee Manager':
           updateEmployeeManager();
+          break;
+        case 'Create New Department':
+          createNewDepartment();
           break;
         case 'Exit Program':
           console.log('Goodbye!');
@@ -435,6 +438,25 @@ const updateEmployeeManager = () => {
         })
       })
   })
+}
+
+const createNewDepartment = () => {
+  inquirer
+    .prompt({
+      type: 'input',
+      name: 'newDepartment',
+      message: 'What is the name of the new department?',
+    }).then((answer) => {
+      connection.query(`
+      INSERT INTO department SET ?`, {
+        deptname: answer.newDepartment
+      }, (err, res) => {
+        if (err) throw err;
+        console.log(`${answer.newDepartment} department has been created!`)
+        introQuestion();
+      }
+      )
+    })
 }
 
 
