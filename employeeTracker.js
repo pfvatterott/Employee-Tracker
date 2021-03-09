@@ -16,7 +16,7 @@ const introQuestion = () => {
       type: 'list',
       name: 'introQuestion',
       message: 'What would you like to do?',
-      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Create New Role', 'Remove Department', 'Remove Role', 'Exit Program'],
+      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Create New Role', 'Remove Department', 'Remove Role', 'View all departments', 'View All Roles', 'View Department Budget', 'Exit Program'],
     })
     .then((answer) => {
       switch (answer.introQuestion) {
@@ -52,6 +52,15 @@ const introQuestion = () => {
           break;
         case 'Remove Role':
           removeRole();
+          break;
+        case 'View all departments':
+          viewAllDepartments();
+          break;
+        case 'View All Roles':
+          viewAllRoles();
+          break;
+        case 'View Department Budget':
+          viewDepartmentBudget();
           break;
         case 'Exit Program':
           console.log('Goodbye!');
@@ -152,6 +161,27 @@ const viewByManager = () => {
           })
         })
       })
+  })
+}
+
+const viewAllDepartments = () => {
+  connection.query(`
+  SELECT * FROM department;
+  `, (err, res) => {
+    if (err) throw err;
+    console.log(console.table(res));
+    introQuestion();
+  })
+};
+
+const viewAllRoles = () => {
+  connection.query(`
+  SELECT * FROM employee_tracker.employee_role
+  RIGHT JOIN employee_tracker.department ON department.department_id = employee_role.department_id;
+  `, (err, res) => {
+    if (err) throw err;
+    console.log(console.table(res));
+    introQuestion();
   })
 }
 
@@ -639,7 +669,7 @@ const removeRole = () => {
               choices: roleArray,
             }).then((answer) => {
               connection.query(`
-              DELETE FROM employee role WHERE ?`,
+              DELETE FROM employee_role WHERE ?`,
               {
                 role_id: answer.roleChoice.split(" ")[0]
               },
@@ -661,6 +691,49 @@ const removeRole = () => {
       }
       )
   })
+}
+
+const viewDepartmentBudget = () => {
+  connection.query(`
+  SELECT * FROM department
+  `, (err, res) => {
+    if (err) throw err;
+    let deptArray = [];
+    for (let i = 0; i < res.length; i++) {
+      deptArray.push(res[i].department_id + " " + res[i].deptname)
+    }
+    inquirer
+      .prompt({
+        type: 'list',
+        name: 'deptChoice',
+        message: 'From which department?',
+        choices: deptArray,
+      }).then((answer) => {
+        connection.query(`
+        SELECT * FROM employee_tracker.employee
+        INNER JOIN employee_tracker.employee_role ON employee.role_id = employee_role.role_id
+        INNER JOIN employee_tracker.department ON employee_role.department_id = department.department_id
+        WHERE employee_role.department_id = ${answer.deptChoice.split(" ")[0]}; 
+        `, (err, res) => {
+          if (err) throw err;
+          console.log(res);
+          let deptBudget = 0;
+          for (let i = 0; i < res.length; i++) {
+            deptBudget += res[i].salary;
+          }
+          console.log(`
+          .
+          .
+          .
+          The yearly budget of ${answer.deptChoice} is ${deptBudget}
+          .
+          .
+          .
+          `)
+        })
+      })
+  })
+
 }
 
 
