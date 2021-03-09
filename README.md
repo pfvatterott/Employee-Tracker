@@ -23,7 +23,7 @@
   ## Usage
   Install the program, run 'node employeeTracker.js', then use your arrow keys to navigate through the program.
 
-  [Click here to see a video walk through](https://pfvatterott-note-taker.herokuapp.com/)
+  [Click here to see a video walk through](https://drive.google.com/file/d/15rdXF5YVoDeHHxnEn-V8bpfqWwjw4FG-/view)
 
 
   ## License
