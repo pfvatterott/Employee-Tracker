@@ -1,12 +1,15 @@
 const mysql = require('mysql');
 const inquirer = require('inquirer');
 const cTable = require('console.table');
+const dotenv = require('dotenv')
+dotenv.config()
+
 
 const connection = mysql.createConnection({
   host: 'localhost',
   port: 3306,
   user: 'root',
-  password: '$Uper123',
+  password: process.env.PASSWORD,
   database: 'employee_tracker',
 });
 
@@ -16,7 +19,7 @@ const introQuestion = () => {
       type: 'list',
       name: 'introQuestion',
       message: 'What would you like to do?',
-      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Create New Role', 'Remove Department', 'Remove Role', 'View all departments', 'View All Roles', 'View Department Budget', 'Exit Program'],
+      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'View All Roles', 'View All Departments', 'View Department Budget', 'Create New Employee', 'Create New Department', 'Create New Role', 'Update Employee Role', 'Update Employee Manager', 'Remove Employee', 'Remove Department', 'Remove Role', 'Exit Program'],
     })
     .then((answer) => {
       switch (answer.introQuestion) {
@@ -29,7 +32,7 @@ const introQuestion = () => {
         case 'View All Employees by Manager':
           viewByManager();
           break;
-        case 'Add Employee':
+        case 'Create New Employee':
           addEmployee();
           break;
         case 'Remove Employee':
@@ -53,7 +56,7 @@ const introQuestion = () => {
         case 'Remove Role':
           removeRole();
           break;
-        case 'View all departments':
+        case 'View All Departments':
           viewAllDepartments();
           break;
         case 'View All Roles':
@@ -82,7 +85,8 @@ const viewAllEmployees = () => {
     for (let i = 0; i < res.length; i++) {
       nameArray.push({ last_name: res[i].last_name, first_name: res[i].first_name, dept: res[i].deptname, position: res[i].title })
     }
-    console.log(console.table(nameArray));
+    const table = cTable.getTable(nameArray)
+    console.log(table)
     introQuestion();
   })
 };
@@ -109,7 +113,8 @@ const viewByDepartment = () => {
       WHERE deptname = '${answer.deptChoice}';
       `, (err, res) => {
           if (err) throw err;
-          console.log(console.table(res));
+          const table = cTable.getTable(res)
+          console.log(table)
           introQuestion();
         })
       })
@@ -136,8 +141,6 @@ const viewByManager = () => {
         message: 'Which Manager?',
         choices: managers,
       }).then((answer) => {
-        // find what the managers employee ID is
-        // split answer string into two variables, first and last name
         const firstAndLast = answer.managerChoice.split(" ")
         connection.query(`
           SELECT * 
@@ -156,7 +159,8 @@ const viewByManager = () => {
             WHERE manager_id = ${managerID};
             `, (err, res) => {
             if (err) throw err;
-            console.log(console.table(res));
+            const table = cTable.getTable(res)
+            console.log(table)
             introQuestion();
           })
         })
@@ -169,7 +173,8 @@ const viewAllDepartments = () => {
   SELECT * FROM department;
   `, (err, res) => {
     if (err) throw err;
-    console.log(console.table(res));
+    const table = cTable.getTable(res)
+    console.log(table)
     introQuestion();
   })
 };
@@ -180,7 +185,8 @@ const viewAllRoles = () => {
   RIGHT JOIN employee_tracker.department ON department.department_id = employee_role.department_id;
   `, (err, res) => {
     if (err) throw err;
-    console.log(console.table(res));
+    const table = cTable.getTable(res)
+    console.log(table)
     introQuestion();
   })
 }
@@ -424,6 +430,7 @@ const updateEmployeeManager = () => {
   employeeList = [];
   connection.query(`
   SELECT first_name, last_name FROM employee
+  WHERE manager_id > 0
   ORDER BY last_name;
   `, (err, res) => {
     if (err) throw err;
@@ -461,7 +468,6 @@ const updateEmployeeManager = () => {
               SELECT * FROM employee
               WHERE role_id = ${res[0].role_id};
               `, (err, res) => {
-                console.log(res)
                 const managerList = [];
                 for (let i = 0; i < res.length; i++) {
                   managerList.push(res[i].first_name + " " + res[i].last_name)
@@ -551,51 +557,51 @@ const createNewRole = () => {
           return 'Please enter a number'
         }
       }
-  ]).then((answers) => {
-    const newRole = answers.newRole;
-    const newSalary = answers.salary;
-    connection.query(`
+    ]).then((answers) => {
+      const newRole = answers.newRole;
+      const newSalary = answers.salary;
+      connection.query(`
     SELECT * FROM department
     `, (err, res) => {
-      const deptInformation = res;
-      if (err) throw err;
-      const deptArray = [];
-      for (let i = 0; i < res.length; i++) {
-        deptArray.push(res[i].deptname)
-      }
-      inquirer
-        .prompt({
-          type: 'list',
-          name: 'department',
-          message: 'Which department will this role be for?',
-          choices: deptArray,
-        }).then((answer) => {
-          let departmentID;
-          for (let i = 0; i < deptInformation.length; i++) {
-            if (deptInformation[i].deptname == answer.department){
-              departmentID = deptInformation[i].department_id;
+        const deptInformation = res;
+        if (err) throw err;
+        const deptArray = [];
+        for (let i = 0; i < res.length; i++) {
+          deptArray.push(res[i].deptname)
+        }
+        inquirer
+          .prompt({
+            type: 'list',
+            name: 'department',
+            message: 'Which department will this role be for?',
+            choices: deptArray,
+          }).then((answer) => {
+            let departmentID;
+            for (let i = 0; i < deptInformation.length; i++) {
+              if (deptInformation[i].deptname == answer.department) {
+                departmentID = deptInformation[i].department_id;
+              }
             }
-          }
-          connection.query(`
-          INSERT INTO employee_role SET ?`, 
-          {
-            title: newRole,
-            salary: newSalary,
-            department_id: departmentID,
-          },
-            (err, res) => {
-            if (err) throw err;
-            console.log(`
+            connection.query(`
+          INSERT INTO employee_role SET ?`,
+              {
+                title: newRole,
+                salary: newSalary,
+                department_id: departmentID,
+              },
+              (err, res) => {
+                if (err) throw err;
+                console.log(`
             .
             .
             The new role of ${newRole} has been created!
             .
             .`)
-            introQuestion();
+                introQuestion();
+              })
           })
-        })
+      })
     })
-  })
 }
 
 const removeDepartment = () => {
@@ -616,9 +622,9 @@ const removeDepartment = () => {
       }).then((answer) => {
         connection.query(`
         DELETE FROM department WHERE ?`,
-        {
-          department_id: answer.deptChoice.split(" ")[0],
-        },
+          {
+            department_id: answer.deptChoice.split(" ")[0],
+          },
           (err, res) => {
             if (err) throw err;
             console.log(`
@@ -659,7 +665,7 @@ const removeRole = () => {
           if (err) throw err;
           let roleArray = [];
           for (let i = 0; i < res.length; i++) {
-            roleArray.push(res[i].role_id + " " + res[i].title)  
+            roleArray.push(res[i].role_id + " " + res[i].title)
           }
           inquirer
             .prompt({
@@ -670,9 +676,9 @@ const removeRole = () => {
             }).then((answer) => {
               connection.query(`
               DELETE FROM employee_role WHERE ?`,
-              {
-                role_id: answer.roleChoice.split(" ")[0]
-              },
+                {
+                  role_id: answer.roleChoice.split(" ")[0]
+                },
                 (err, res) => {
                   if (err) throw err;
                   console.log(`
@@ -716,7 +722,6 @@ const viewDepartmentBudget = () => {
         WHERE employee_role.department_id = ${answer.deptChoice.split(" ")[0]}; 
         `, (err, res) => {
           if (err) throw err;
-          console.log(res);
           let deptBudget = 0;
           for (let i = 0; i < res.length; i++) {
             deptBudget += res[i].salary;
@@ -725,15 +730,15 @@ const viewDepartmentBudget = () => {
           .
           .
           .
-          The yearly budget of ${answer.deptChoice} is ${deptBudget}
+          The yearly budget of ${answer.deptChoice} is $${deptBudget}
           .
           .
           .
           `)
+          introQuestion();
         })
       })
   })
-
 }
 
 
