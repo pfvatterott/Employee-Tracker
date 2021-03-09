@@ -16,7 +16,7 @@ const introQuestion = () => {
       type: 'list',
       name: 'introQuestion',
       message: 'What would you like to do?',
-      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Create New Role', 'Exit Program'],
+      choices: ['View All Employees', 'View All Employees by Department', 'View All Employees by Manager', 'Add Employee', 'Remove Employee', 'Update Employee Role', 'Update Employee Manager', 'Create New Department', 'Create New Role', 'Remove Department', 'Remove Role', 'Exit Program'],
     })
     .then((answer) => {
       switch (answer.introQuestion) {
@@ -46,6 +46,12 @@ const introQuestion = () => {
           break;
         case 'Create New Role':
           createNewRole();
+          break;
+        case 'Remove Department':
+          removeDepartment();
+          break;
+        case 'Remove Role':
+          removeRole();
           break;
         case 'Exit Program':
           console.log('Goodbye!');
@@ -242,7 +248,14 @@ const addEmployee = () => {
                       },
                       (err, res) => {
                         if (err) throw err;
-                        console.log(`${newEmployee[0].firstName} ${newEmployee[0].lastName} has been added!`)
+                        console.log(`
+                        .
+                        .
+                        .
+                        ${newEmployee[0].firstName} ${newEmployee[0].lastName} has been added!
+                        .
+                        .
+                        .`)
                         introQuestion();
                       })
                   })
@@ -284,7 +297,14 @@ const removeEmployee = () => {
           ],
           (err, res) => {
             if (err) throw err;
-            console.log(`The employee ${firstName} ${lastName} has been removed!`);
+            console.log(`
+            .
+            .
+            .
+            The employee ${firstName} ${lastName} has been removed!
+            .
+            .
+            .`);
             introQuestion();
           }
         )
@@ -351,7 +371,14 @@ const updateEmployeeRole = () => {
                     WHERE first_name = '${firstName}' and last_name = '${lastName}'
                     `, (err, res) => {
                       if (err) throw err;
-                      console.log(`${firstName} ${lastName} has been updated to ${answer.deptList}`);
+                      console.log(`
+                      .
+                      .
+                      .
+                      ${firstName} ${lastName} has been updated to ${answer.deptList}
+                      .
+                      .
+                      .`);
                       introQuestion();
                     })
                   })
@@ -430,7 +457,14 @@ const updateEmployeeManager = () => {
                       WHERE employee_id = ${employeeID};
                     `, (err, res) => {
                         if (err) throw err;
-                        console.log(`${firstName} ${lastName}'s manager has been updated to ${managerFirstName} ${managerLastName}`);
+                        console.log(`
+                        .
+                        .
+                        .
+                        ${firstName} ${lastName}'s manager has been updated to ${managerFirstName} ${managerLastName}
+                        .
+                        .
+                        .`);
                         introQuestion();
                       })
                     })
@@ -455,7 +489,12 @@ const createNewDepartment = () => {
         deptname: answer.newDepartment
       }, (err, res) => {
         if (err) throw err;
-        console.log(`${answer.newDepartment} department has been created!`)
+        console.log(`
+        .
+        .
+        ${answer.newDepartment} department has been created!
+        .
+        .`)
         introQuestion();
       }
       )
@@ -516,11 +555,111 @@ const createNewRole = () => {
           },
             (err, res) => {
             if (err) throw err;
-            console.log(`The new role of ${newRole} has been created!`)
+            console.log(`
+            .
+            .
+            The new role of ${newRole} has been created!
+            .
+            .`)
             introQuestion();
           })
         })
     })
+  })
+}
+
+const removeDepartment = () => {
+  connection.query(`
+  SELECT * FROM department
+  `, (err, res) => {
+    if (err) throw err;
+    let deptArray = [];
+    for (let i = 0; i < res.length; i++) {
+      deptArray.push(res[i].department_id + " " + res[i].deptname)
+    }
+    inquirer
+      .prompt({
+        type: 'list',
+        name: 'deptChoice',
+        message: 'Which department would you like to remove?',
+        choices: deptArray,
+      }).then((answer) => {
+        connection.query(`
+        DELETE FROM department WHERE ?`,
+        {
+          department_id: answer.deptChoice.split(" ")[0],
+        },
+          (err, res) => {
+            if (err) throw err;
+            console.log(`
+            .
+            .
+            ${answer.deptChoice} deleted successfully!
+            .
+            .
+            `)
+            introQuestion();
+          }
+        )
+      })
+  })
+}
+
+const removeRole = () => {
+  connection.query(`
+  SELECT * FROM department
+  `, (err, res) => {
+    if (err) throw err;
+    let deptArray = [];
+    for (let i = 0; i < res.length; i++) {
+      deptArray.push(res[i].department_id + " " + res[i].deptname)
+    }
+    inquirer
+      .prompt({
+        type: 'list',
+        name: 'deptChoice',
+        message: 'From which department would you like to delete a role from?',
+        choices: deptArray,
+      }).then((answer) => {
+        const deptID = answer.deptChoice.split(" ")[0];
+        connection.query(`
+        SELECT * FROM employee_role
+        WHERE department_id = ${deptID};
+        `, (err, res) => {
+          if (err) throw err;
+          let roleArray = [];
+          for (let i = 0; i < res.length; i++) {
+            roleArray.push(res[i].role_id + " " + res[i].title)  
+          }
+          inquirer
+            .prompt({
+              type: 'list',
+              name: 'roleChoice',
+              message: 'Which role would you like to remove?',
+              choices: roleArray,
+            }).then((answer) => {
+              connection.query(`
+              DELETE FROM employee role WHERE ?`,
+              {
+                role_id: answer.roleChoice.split(" ")[0]
+              },
+                (err, res) => {
+                  if (err) throw err;
+                  console.log(`
+                  .
+                  .
+                  .
+                  Role ${answer.roleChoice} has been removed successfully!
+                  .
+                  .
+                  .
+                  `)
+                  introQuestion();
+                })
+            })
+        })
+      }
+      )
   })
 }
 
