@@ -242,17 +242,22 @@ const addEmployee = () => {
             message: 'Who is their Manager?',
             choices: managers,
           }).then((answers) => {
-            const firstAndLast = answers.employeeManager.split(" ")
-            connection.query(`
-            SELECT * 
-            FROM employee
-            INNER JOIN employee_role ON employee.role_id = employee_role.role_id
-            INNER JOIN department ON employee_role.department_id = department.department_id
-            WHERE first_name = '${firstAndLast[0]}' AND last_name = '${firstAndLast[1]}';
-            `, (err, res) => {
-              if (err) throw err;
-              newEmployee.push({ managerID: res[0].employee_id })
-            })
+            if (answers.employeeManager === 'They do not have a manager') {
+              newEmployee.push({ managerID: null })
+            }
+            else {
+              const firstAndLast = answers.employeeManager.split(" ")
+              connection.query(`
+              SELECT * 
+              FROM employee
+              INNER JOIN employee_role ON employee.role_id = employee_role.role_id
+              INNER JOIN department ON employee_role.department_id = department.department_id
+              WHERE first_name = '${firstAndLast[0]}' AND last_name = '${firstAndLast[1]}';
+              `, (err, res) => {
+                if (err) throw err;
+                newEmployee.push({ managerID: res[0].employee_id })
+              })
+            }
             connection.query(`
           SELECT role_id, title, department_id FROM employee_role 
           WHERE department_id = ${newEmployee[0].department_id}
